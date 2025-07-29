@@ -1,3 +1,5 @@
+-- You are not allowed to make ur own version of this script
+
 pcall(function()
    if getgenv().AccentLoaded then return end
 	local function randomString(length)
