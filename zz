@@ -1,3 +1,26 @@
+local config = {
+    MaxDistance = 200,
+    FOV = 300,
+    RaycastOffset = Vector3.new(0, 1.5, 0),
+    ScoreWeights = {
+        ScreenDist = 0.7,
+        Distance = 0.3,
+    },
+}
+
+local function getrealscreencenter()
+local camera = workspace.CurrentCamera
+
+-- use a point directly in front of the camera
+local centerPos = camera.CFrame.Position + camera.CFrame.LookVector
+local screenPos, onScreen = camera:WorldToViewportPoint(centerPos)
+
+local screenCenterv = Vector2.new(screenPos.X, screenPos.Y)
+return screenCenterv * 2
+end
+
+getgenv().fov = 300
+
 local function getTargetPlayer()
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -73,7 +96,7 @@ local Camera = Workspace.CurrentCamera
                                 if onScreen then
                                     local screenPoint = Vector2.new(screenPos.X, screenPos.Y)
                                     local screenDist = (screenPoint - screenCenter).Magnitude
-                                    if screenDist <= config.FOV then
+                                    if screenDist <= getgenv().fov then
                                         -- Inline visibility check
                                         local partsObscuring = Camera:GetPartsObscuringTarget({Camera.CFrame.Position, targetPos}, getgenv().ignoreInstances)
                                         if #partsObscuring == 0 then
