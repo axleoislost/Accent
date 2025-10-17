@@ -5,6 +5,7 @@
 
 task.spawn(function()
     while true do
+        task.wait(1)
          ignorePartNames = {"Handle","Sunglasses","Sunglasses1","_laser2","Sunglasses2","Blade","Stick","Chains","Occluder"}
          ignoreInstances = {workspace:FindFirstChild("MorphAssets")}
     
@@ -20,7 +21,6 @@ task.spawn(function()
                     end
                 end
             end
-            task.wait(0.02)
         end
     end
 end)
