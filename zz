@@ -120,3 +120,5 @@ local Camera = Workspace.CurrentCamera
     end
     return bestPlayer
 end
+
+return getTargetPlayer
