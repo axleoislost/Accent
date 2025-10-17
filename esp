@@ -1,0 +1,150 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+if getgenv().espenabled == nil then
+    getgenv().espenabled = false
+end
+
+local espBoxes = {}
+local lineThickness = 3.4
+local wallGap = 2
+local connection
+local playerAddedConnection
+local playerRemovingConnection
+
+local function createESPBox(player)
+    if espBoxes[player] then return end
+
+    local box1 = {Top = Drawing.new("Line"), Bottom = Drawing.new("Line"), Left = Drawing.new("Line"), Right = Drawing.new("Line")}
+    local box2 = {Top = Drawing.new("Line"), Bottom = Drawing.new("Line"), Left = Drawing.new("Line"), Right = Drawing.new("Line")}
+
+    for _, line in pairs(box1) do
+        line.Thickness = lineThickness
+        line.Transparency = 1
+        line.ZIndex = 1
+        line.Color = Color3.new(1, 1, 1)
+        line.Visible = false
+    end
+    for _, line in pairs(box2) do
+        line.Thickness = lineThickness
+        line.Transparency = 1
+        line.ZIndex = 1
+        line.Color = Color3.new(1, 1, 1)
+        line.Visible = false
+    end
+
+    espBoxes[player] = {front = box1, side = box2}
+end
+
+local function removeESPBox(player)
+    if espBoxes[player] then
+        for _, box in pairs(espBoxes[player]) do
+            for _, line in pairs(box) do
+                line:Remove()
+            end
+        end
+        espBoxes[player] = nil
+    end
+end
+
+local function boxesEnabled(enabled)
+    if enabled then
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                createESPBox(player)
+            end
+        end
+
+        playerAddedConnection = Players.PlayerAdded:Connect(function(player)
+            if player ~= LocalPlayer then
+                createESPBox(player)
+            end
+        end)
+
+        playerRemovingConnection = Players.PlayerRemoving:Connect(removeESPBox)
+
+        connection = RunService.RenderStepped:Connect(function()
+            for player, boxes in pairs(espBoxes) do
+                local character = player.Character
+                local hrp = character and character:FindFirstChild("HumanoidRootPart")
+                if character and hrp then
+                    local cf = hrp.CFrame
+                    local boxWidth = 2
+                    local boxHeight = 4
+                    local halfWidth = boxWidth / 2
+                    local halfHeight = boxHeight / 2
+
+                    local frontPoints = {
+                        cf * Vector3.new(-halfWidth, halfHeight, 0),
+                        cf * Vector3.new(halfWidth, halfHeight, 0),
+                        cf * Vector3.new(-halfWidth, -halfHeight, 0),
+                        cf * Vector3.new(halfWidth, -halfHeight, 0)
+                    }
+
+                    local rotatedCF = cf * CFrame.Angles(0, math.rad(90), 0)
+                    local sidePoints = {
+                        rotatedCF * Vector3.new(-halfWidth, halfHeight, 0),
+                        rotatedCF * Vector3.new(halfWidth, halfHeight, 0),
+                        rotatedCF * Vector3.new(-halfWidth, -halfHeight, 0),
+                        rotatedCF * Vector3.new(halfWidth, -halfHeight, 0)
+                    }
+
+                    local function updateBox(box, points)
+                        local screenTL, onScreen1 = Camera:WorldToViewportPoint(points[1])
+                        local screenTR, onScreen2 = Camera:WorldToViewportPoint(points[2])
+                        local screenBL, onScreen3 = Camera:WorldToViewportPoint(points[3])
+                        local screenBR, onScreen4 = Camera:WorldToViewportPoint(points[4])
+
+                        if onScreen1 and onScreen2 and onScreen3 and onScreen4 then
+                            box.Top.From = Vector2.new(screenTL.X + wallGap, screenTL.Y)
+                            box.Top.To = Vector2.new(screenTR.X - wallGap, screenTR.Y)
+                            box.Bottom.From = Vector2.new(screenBL.X + wallGap, screenBL.Y)
+                            box.Bottom.To = Vector2.new(screenBR.X - wallGap, screenBR.Y)
+                            box.Left.From = Vector2.new(screenTL.X, screenTL.Y)
+                            box.Left.To = Vector2.new(screenBL.X, screenBL.Y)
+                            box.Right.From = Vector2.new(screenTR.X, screenTR.Y)
+                            box.Right.To = Vector2.new(screenBR.X, screenBR.Y)
+
+                            local color = player.Team and player.Team.TeamColor.Color or Color3.new(1, 1, 1)
+                            for _, line in pairs(box) do
+                                line.Color = color
+                                line.Visible = true
+                            end
+                        else
+                            for _, line in pairs(box) do
+                                line.Visible = false
+                            end
+                        end
+                    end
+
+                    updateBox(boxes.front, frontPoints)
+                    updateBox(boxes.side, sidePoints)
+                else
+                    for _, box in pairs(boxes) do
+                        for _, line in pairs(box) do
+                            line.Visible = false
+                        end
+                    end
+                end
+            end
+        end)
+    else
+        if connection then connection:Disconnect() connection = nil end
+        if playerAddedConnection then playerAddedConnection:Disconnect() playerAddedConnection = nil end
+        if playerRemovingConnection then playerRemovingConnection:Disconnect() playerRemovingConnection = nil end
+
+        for player, _ in pairs(espBoxes) do
+            removeESPBox(player)
+        end
+    end
+end
+
+local currentESPState = false
+RunService.Heartbeat:Connect(function()
+    if getgenv().espenabled ~= currentESPState then
+        currentESPState = getgenv().espenabled
+        boxesEnabled(currentESPState)
+    end
+end)
