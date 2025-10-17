@@ -46,6 +46,6 @@ task.spawn(function()
                 getgenv().ignoreInstances = morphAssets and {morphAssets} or {}
             end
         end
-        task.wait(0.05)
+                    task.wait(0.03)
     end
 end)
