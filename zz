@@ -1,0 +1,99 @@
+local function getTargetPlayer()
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+
+
+
+    local viewportSize = getrealscreencenter()
+    local screenCenter = Vector2.new(viewportSize.X/2, viewportSize.Y/2)
+
+    local character = LocalPlayer.Character
+    if not character then return nil end
+
+    local hasToolEquipped = false
+    for _, item in ipairs(character:GetChildren()) do
+        if item:IsA("Tool") then
+            hasToolEquipped = true
+            break
+        end
+    end
+    if not hasToolEquipped then return nil end
+
+    local bestPlayer = nil
+    local bestScore = math.huge
+
+    for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+        if player.Character and not (player.Character:HasTag("TutorialImmunity")) then
+        if player ~= LocalPlayer then 
+                local char = player.Character
+                if char and char:FindFirstChildWhichIsA("Humanoid") and char:FindFirstChildWhichIsA("Humanoid").Health > 0 then
+                    -- Determine if targetable
+                    local istarget = false
+                    local playerTeam = LocalPlayer.Team and LocalPlayer.Team.Name or ""
+                    local otherTeam = player.Team and player.Team.Name or ""
+
+                    local head = char:FindFirstChild("Head")
+                    if (head and head.BrickColor == BrickColor.new("Olivine")) or
+                    (Workspace:FindFirstChild(player.Name) and Workspace[player.Name]:FindFirstChild("001MorphBits")) then
+                        istarget = true
+                    else
+                        if playerTeam == "Class - D" or playerTeam == "Chaos Insurgency" then
+                            istarget = not (otherTeam == "Class - D" or otherTeam == "Chaos Insurgency")
+                        else
+                            istarget = (otherTeam == "Class - D" or otherTeam == "Chaos Insurgency")
+                        end
+                    end
+
+                    if istarget then
+                        -- Inline targeting point logic
+                        local targetPos
+                        if head then
+                            targetPos = head.Position + config.RaycastOffset
+                        else
+                            local hrp = char:FindFirstChild("HumanoidRootPart")
+                            if hrp then
+                                targetPos = hrp.Position
+                            else
+                                for _, part in ipairs(char:GetChildren()) do
+                                    if part:IsA("BasePart") then
+                                        targetPos = part.Position
+                                        break
+                                    end
+                                end
+                            end
+                        end
+
+                        if targetPos then
+                            local worldDist = (Camera.CFrame.Position - targetPos).Magnitude
+                            if worldDist <= config.MaxDistance then
+                                local screenPos, onScreen = Camera:WorldToViewportPoint(targetPos)
+                                if onScreen then
+                                    local screenPoint = Vector2.new(screenPos.X, screenPos.Y)
+                                    local screenDist = (screenPoint - screenCenter).Magnitude
+                                    if screenDist <= config.FOV then
+                                        -- Inline visibility check
+                                        local partsObscuring = Camera:GetPartsObscuringTarget({Camera.CFrame.Position, targetPos}, getgenv().ignoreInstances)
+                                        if #partsObscuring == 0 then
+                                            local score = (screenDist * config.ScoreWeights.ScreenDist) + (worldDist * config.ScoreWeights.Distance)
+                                            if score < bestScore then
+                                                bestScore = score
+                                                bestPlayer = player
+                                            end
+                                        else
+                                        for _, part in ipairs(partsObscuring) do
+                                                --print("Obstructing part:", part.Name)
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+        end end
+    end
+    return bestPlayer
+end
